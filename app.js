@@ -145,13 +145,30 @@ document.addEventListener('DOMContentLoaded', () => {
         saveStopwatchToStorage();
       }
       
-      // Update display with saved elapsed time
-      updateStopwatchDisplay(stopwatchState.elapsedTime);
-      
-      // Enable buttons if elapsed time exists
-      if (stopwatchState.elapsedTime > 0) {
-        btnReset.disabled = false;
+      // Check if stopwatch was running when refreshed
+      if (parsed.isRunning && parsed.startTime) {
+        stopwatchState.isRunning = true;
+        stopwatchState.startTime = parsed.startTime;
+        stopwatchState.elapsedTime = Date.now() - parsed.startTime;
+        
+        statusLabel.textContent = 'RUNNING';
+        dialGlow.classList.add('running');
+        btnStartPause.innerHTML = `<i data-lucide="pause"></i><span>Pause</span>`;
+        
+        btnLap.disabled = false;
         btnSaveTime.disabled = false;
+        btnReset.disabled = false;
+        
+        stopwatchState.animationFrameId = requestAnimationFrame(tickStopwatch);
+      } else {
+        // Update display with saved elapsed time
+        updateStopwatchDisplay(stopwatchState.elapsedTime);
+        
+        // Enable buttons if elapsed time exists
+        if (stopwatchState.elapsedTime > 0) {
+          btnReset.disabled = false;
+          btnSaveTime.disabled = false;
+        }
       }
     }
     renderStopwatchRecords();
@@ -292,6 +309,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnLap.disabled = false;
     btnSaveTime.disabled = false;
     btnReset.disabled = false;
+    
+    // Save stopwatch state immediately to persist across refreshes
+    saveStopwatchToStorage();
     
     // Start RAF Loop
     stopwatchState.animationFrameId = requestAnimationFrame(tickStopwatch);
@@ -578,6 +598,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveStopwatchToStorage() {
     localStorage.setItem('aura_stopwatch_state', JSON.stringify({
+      isRunning: stopwatchState.isRunning,
+      startTime: stopwatchState.startTime,
       elapsedTime: stopwatchState.elapsedTime,
       laps: stopwatchState.laps,
       history: stopwatchState.history
