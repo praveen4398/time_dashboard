@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeTaskId = null;
   let currentTodoFilter = 'all'; // 'all' | 'active' | 'completed'
   let selectedTodoPriority = 'low'; // 'low' | 'medium' | 'high'
+  let currentTodoView = 'todo'; // 'todo' | 'habit'
+  let selectedTodoType = 'todo'; // 'todo' | 'habit'
 
   // Grid State (Dynamic Calendar)
   let currentYear = new Date().getFullYear();
@@ -101,6 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const todoTabs = document.querySelectorAll('.todo-tab');
   const activeTaskIndicator = document.getElementById('active-task-indicator');
   const activeTaskName = document.getElementById('active-task-name');
+  const viewSelectorBtns = document.querySelectorAll('.view-selector-btn');
+  const typeBtns = document.querySelectorAll('.type-btn');
+  const dueDateContainer = document.getElementById('due-date-container');
+  const todoDueDateInput = document.getElementById('todo-due-date');
 
   /* ==========================================================================
      INITIALIZATION
@@ -877,7 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btnAddTodo.addEventListener('click', () => {
     const title = todoInput.value.trim();
     if (title) {
-      addTask(title, selectedTodoPriority);
+      addTask(title, selectedTodoPriority, selectedTodoType, todoDueDateInput.value);
     }
   });
 
@@ -885,7 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') {
       const title = todoInput.value.trim();
       if (title) {
-        addTask(title, selectedTodoPriority);
+        addTask(title, selectedTodoPriority, selectedTodoType, todoDueDateInput.value);
       }
     }
   });
@@ -896,6 +902,32 @@ document.addEventListener('DOMContentLoaded', () => {
       priorityButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedTodoPriority = btn.getAttribute('data-priority');
+    });
+  });
+
+  // View Selectors (Tasks vs Habits)
+  viewSelectorBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      viewSelectorBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentTodoView = btn.getAttribute('data-view');
+      renderTasks();
+    });
+  });
+
+  // Inline Type Toggles (Tasks vs Habits)
+  typeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      typeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTodoType = btn.getAttribute('data-type');
+      
+      // Toggle due date input visibility dynamically
+      if (selectedTodoType === 'habit') {
+        dueDateContainer.style.display = 'none';
+      } else {
+        dueDateContainer.style.display = 'flex';
+      }
     });
   });
 
@@ -1138,10 +1170,37 @@ document.addEventListener('DOMContentLoaded', () => {
      TO-DO LIST (TASK COMPANION) LOGIC
      ========================================================================== */
   
+  function getTodayDateString() {
+    const now = new Date();
+    const yr = now.getFullYear();
+    const mo = (now.getMonth() + 1).toString().padStart(2, '0');
+    const dy = now.getDate().toString().padStart(2, '0');
+    return `${yr}-${mo}-${dy}`;
+  }
+
+  function formatDateFriendly(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
   function loadTasks() {
     const savedTasks = localStorage.getItem('aura_todo_tasks');
     if (savedTasks) {
-      tasks = JSON.parse(savedTasks);
+      // Migrate old tasks (assign type: 'todo' if type is missing)
+      tasks = JSON.parse(savedTasks).map(task => {
+        if (!task.type) {
+          task.type = 'todo';
+          task.isCompleted = task.isCompleted !== undefined ? task.isCompleted : false;
+          task.dueDate = task.dueDate || '';
+        }
+        if (task.type === 'habit' && !task.completedDates) {
+          task.completedDates = [];
+        }
+        return task;
+      });
     } else {
       tasks = [];
     }
@@ -1163,30 +1222,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function addTask(title, priority) {
+  function addTask(title, priority, type = 'todo', dueDate = '') {
     const newTask = {
       id: Date.now(),
       title: title,
       priority: priority,
-      isCompleted: false,
+      type: type, // 'todo' | 'habit'
       trackedMs: 0
     };
+
+    if (type === 'habit') {
+      newTask.completedDates = [];
+    } else {
+      newTask.isCompleted = false;
+      newTask.dueDate = dueDate || '';
+    }
+
     tasks.push(newTask);
     saveTasksToStorage();
     renderTasks();
     todoInput.value = '';
+    todoDueDateInput.value = '';
   }
 
   function toggleTaskCompletion(id) {
     const task = tasks.find(t => t.id === id);
     if (task) {
-      task.isCompleted = !task.isCompleted;
-      // If task is completed and it is currently active, stop active tracking
-      if (task.isCompleted && activeTaskId === id) {
-        if (stopwatchState.isRunning) {
-          pauseStopwatch();
+      if (task.type === 'habit') {
+        const todayStr = getTodayDateString();
+        task.completedDates = task.completedDates || [];
+        if (task.completedDates.includes(todayStr)) {
+          task.completedDates = task.completedDates.filter(d => d !== todayStr);
+          // If checking off today, stop active tracking if it was running
+          if (activeTaskId === id) {
+            if (stopwatchState.isRunning) {
+              pauseStopwatch();
+            }
+            activeTaskId = null;
+          }
+        } else {
+          task.completedDates.push(todayStr);
         }
-        activeTaskId = null;
+      } else {
+        task.isCompleted = !task.isCompleted;
+        // If task is completed and it is currently active, stop active tracking
+        if (task.isCompleted && activeTaskId === id) {
+          if (stopwatchState.isRunning) {
+            pauseStopwatch();
+          }
+          activeTaskId = null;
+        }
       }
       saveTasksToStorage();
       renderTasks();
@@ -1206,58 +1291,185 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function clearCompletedTasks() {
-    const completedIds = tasks.filter(t => t.isCompleted).map(t => t.id);
+    const todayStr = getTodayDateString();
+    
+    // Auto un-track completed ones
+    const completedIds = tasks
+      .filter(t => (t.type === 'todo' && t.isCompleted) || (t.type === 'habit' && (t.completedDates || []).includes(todayStr)))
+      .map(t => t.id);
+      
     if (completedIds.includes(activeTaskId)) {
       if (stopwatchState.isRunning) {
         pauseStopwatch();
       }
       activeTaskId = null;
     }
-    tasks = tasks.filter(t => !t.isCompleted);
+
+    // Only clear 'todo' tasks since habits are recurring
+    tasks = tasks.filter(t => t.type !== 'todo' || !t.isCompleted);
     saveTasksToStorage();
     renderTasks();
   }
 
+  function calculateHabitStreak(completedDates) {
+    if (!completedDates || completedDates.length === 0) return 0;
+    
+    // Sort descending (newest first) and deduplicate
+    const dates = [...new Set(completedDates)].sort((a, b) => new Date(b) - new Date(a));
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const formatDate = (d) => {
+      const yr = d.getFullYear();
+      const mo = (d.getMonth() + 1).toString().padStart(2, '0');
+      const dy = d.getDate().toString().padStart(2, '0');
+      return `${yr}-${mo}-${dy}`;
+    };
+    
+    const todayStr = formatDate(today);
+    const yesterdayStr = formatDate(yesterday);
+    
+    const hasToday = dates.includes(todayStr);
+    const hasYesterday = dates.includes(yesterdayStr);
+    
+    if (!hasToday && !hasYesterday) return 0;
+    
+    let streak = 0;
+    let checkDate = hasToday ? today : yesterday;
+    
+    while (true) {
+      const checkStr = formatDate(checkDate);
+      if (dates.includes(checkStr)) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    
+    return streak;
+  }
+
   function renderTasks() {
     todoListContainer.innerHTML = '';
+    const todayStr = getTodayDateString();
     
-    // Filter tasks
-    let filteredTasks = tasks;
+    // Filter by Tab (To-Do List vs Daily Habits)
+    let viewTasks = tasks.filter(t => t.type === currentTodoView);
+
+    // Filter by Active/Completed sub-tabs
     if (currentTodoFilter === 'active') {
-      filteredTasks = tasks.filter(t => !t.isCompleted);
+      viewTasks = viewTasks.filter(t => {
+        if (t.type === 'habit') {
+          return !t.completedDates.includes(todayStr);
+        } else {
+          return !t.isCompleted;
+        }
+      });
     } else if (currentTodoFilter === 'completed') {
-      filteredTasks = tasks.filter(t => t.isCompleted);
+      viewTasks = viewTasks.filter(t => {
+        if (t.type === 'habit') {
+          return t.completedDates.includes(todayStr);
+        } else {
+          return t.isCompleted;
+        }
+      });
     }
 
-    // Sort tasks: uncompleted first, then by priority (high > medium > low), then by id/date
+    // Sort tasks: uncompleted first, then by priority (high > medium > low), then by date/id
     const priorityWeight = { high: 3, medium: 2, low: 1 };
-    filteredTasks.sort((a, b) => {
-      if (a.isCompleted !== b.isCompleted) {
-        return a.isCompleted ? 1 : -1;
+    viewTasks.sort((a, b) => {
+      // Completed state comparison
+      const aComp = a.type === 'habit' ? a.completedDates.includes(todayStr) : a.isCompleted;
+      const bComp = b.type === 'habit' ? b.completedDates.includes(todayStr) : b.isCompleted;
+      if (aComp !== bComp) {
+        return aComp ? 1 : -1;
       }
+
+      // Priority comparison
       const pDiff = priorityWeight[b.priority] - priorityWeight[a.priority];
       if (pDiff !== 0) return pDiff;
+
+      // Due date comparison (for todos)
+      if (a.type === 'todo' && b.type === 'todo') {
+        if (a.dueDate && b.dueDate) {
+          return new Date(a.dueDate) - new Date(b.dueDate);
+        }
+        if (a.dueDate) return -1;
+        if (b.dueDate) return 1;
+      }
+
       return b.id - a.id;
     });
 
-    if (filteredTasks.length === 0) {
+    // Hide clear completed button for habits since they reset daily and are not deleted
+    if (currentTodoView === 'habit') {
+      btnClearCompleted.style.visibility = 'hidden';
+    } else {
+      btnClearCompleted.style.visibility = 'visible';
+    }
+
+    if (viewTasks.length === 0) {
+      const typeLabel = currentTodoView === 'habit' ? 'habits' : 'tasks';
       todoListContainer.innerHTML = `
         <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 2rem 0;">
-          No tasks found. Add a task to start tracking!
+          No ${typeLabel} found. Add an item to start tracking!
         </div>
       `;
     } else {
-      filteredTasks.forEach(task => {
+      viewTasks.forEach(task => {
         const item = document.createElement('div');
-        item.className = `todo-item priority-${task.priority} ${task.isCompleted ? 'completed' : ''}`;
+        
+        const isCompleted = task.type === 'habit' 
+          ? task.completedDates.includes(todayStr) 
+          : task.isCompleted;
+          
+        item.className = `todo-item priority-${task.priority} ${isCompleted ? 'completed' : ''}`;
         
         const isTrackingThis = activeTaskId === task.id;
         const timeFormatted = formatHoursMinutesSeconds(task.trackedMs || 0);
+
+        // Compute Due Date or Streak Badges
+        let metaBadgeHtml = '';
+        if (task.type === 'todo') {
+          if (task.dueDate) {
+            const isToday = task.dueDate === todayStr;
+            const isOverdue = !task.isCompleted && new Date(task.dueDate) < new Date(todayStr);
+            
+            let badgeClass = '';
+            let text = formatDateFriendly(task.dueDate);
+            if (isToday) {
+              badgeClass = 'today';
+              text = '📅 Today';
+            } else if (isOverdue) {
+              badgeClass = 'overdue';
+              text = '⚠️ Overdue: ' + text;
+            } else {
+              text = '📅 ' + text;
+            }
+            metaBadgeHtml = `<span class="todo-due-date-badge ${badgeClass}">${text}</span>`;
+          }
+        } else { // 'habit'
+          const streak = calculateHabitStreak(task.completedDates || []);
+          metaBadgeHtml = `<span class="todo-due-date-badge">🔁 Daily</span>`;
+          if (streak > 0) {
+            metaBadgeHtml += `
+              <span class="todo-streak-badge">
+                <i data-lucide="flame"></i>
+                <span>${streak} day${streak > 1 ? 's' : ''}</span>
+              </span>
+            `;
+          }
+        }
         
         item.innerHTML = `
           <div class="todo-item-left">
             <label class="todo-checkbox-wrapper">
-              <input type="checkbox" class="todo-checkbox-input" ${task.isCompleted ? 'checked' : ''}>
+              <input type="checkbox" class="todo-checkbox-input" ${isCompleted ? 'checked' : ''}>
               <span class="todo-custom-checkbox"></span>
             </label>
             <div class="todo-details">
@@ -1271,11 +1483,12 @@ document.addEventListener('DOMContentLoaded', () => {
                   <i data-lucide="clock" style="width: 10px; height: 10px;"></i>
                   <span>Tracked: ${timeFormatted}</span>
                 </span>
+                ${metaBadgeHtml ? '• ' + metaBadgeHtml : ''}
               </div>
             </div>
           </div>
           <div class="todo-item-actions">
-            <button class="btn-todo-action play-btn ${isTrackingThis ? 'active-tracking' : ''}" title="${isTrackingThis && stopwatchState.isRunning ? 'Pause Tracking' : 'Track Focus Time'}" ${task.isCompleted ? 'disabled' : ''}>
+            <button class="btn-todo-action play-btn ${isTrackingThis ? 'active-tracking' : ''}" title="${isTrackingThis && stopwatchState.isRunning ? 'Pause Tracking' : 'Track Focus Time'}" ${isCompleted ? 'disabled' : ''}>
               <i data-lucide="${isTrackingThis && stopwatchState.isRunning ? 'pause' : 'play'}"></i>
             </button>
             <button class="btn-todo-action delete-btn" title="Delete Task">
@@ -1303,9 +1516,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Update Progress Info
-    const totalCount = tasks.length;
-    const completedCount = tasks.filter(t => t.isCompleted).length;
+    // Update Progress Info for current view
+    const viewTotalTasks = tasks.filter(t => t.type === currentTodoView);
+    const totalCount = viewTotalTasks.length;
+    const completedCount = viewTotalTasks.filter(t => {
+      if (t.type === 'habit') return t.completedDates.includes(todayStr);
+      return t.isCompleted;
+    }).length;
+    
     todoProgressText.textContent = `${completedCount}/${totalCount} Completed`;
     const pct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
     todoProgressFill.style.width = `${pct}%`;
@@ -1319,14 +1537,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleTaskTrackingToggle(id) {
     if (activeTaskId === id) {
-      // Toggle play/pause on the current active task
       if (stopwatchState.isRunning) {
         pauseStopwatch();
       } else {
         startStopwatch();
       }
     } else {
-      // If there was another active task and stopwatch has elapsed time, auto-save first!
       const currentElapsed = stopwatchState.isRunning 
         ? Date.now() - stopwatchState.startTime 
         : stopwatchState.elapsedTime;
@@ -1335,7 +1551,6 @@ document.addEventListener('DOMContentLoaded', () => {
         saveStopwatchTime();
       }
       
-      // Start tracking new task
       activeTaskId = id;
       saveTasksToStorage();
       startStopwatch();

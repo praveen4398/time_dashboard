@@ -1420,6 +1420,60 @@ header {
   transition: var(--transition-smooth);
 }
 
+/* Main View Tabs */
+.todo-view-selector {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.1rem;
+}
+
+.view-selector-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-main);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  transition: var(--transition-smooth);
+}
+
+.view-selector-btn:hover {
+  color: var(--text-main);
+}
+
+.view-selector-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--color-primary);
+  transform: scaleX(0);
+  transition: var(--transition-smooth);
+}
+
+.view-selector-btn.active {
+  color: var(--color-primary);
+}
+
+.view-selector-btn.active::after {
+  transform: scaleX(1);
+}
+
+.view-selector-btn svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 /* Input Form */
 .todo-input-form {
   display: flex;
@@ -1428,23 +1482,72 @@ header {
   margin-bottom: 1.5rem;
 }
 
-.todo-input-container input {
-  width: 100%;
+.todo-input-container {
+  display: flex;
+  align-items: center;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-color);
-  padding: 0.85rem 1rem;
   border-radius: 1rem;
+  transition: var(--transition-smooth);
+  padding-right: 0.75rem;
+}
+
+.todo-input-container:focus-within {
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.1);
+}
+
+.todo-input-container input {
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0.85rem 1rem;
   color: var(--text-main);
   font-family: var(--font-main);
   font-size: 0.95rem;
   transition: var(--transition-smooth);
 }
 
-.todo-input-container input:focus {
-  outline: none;
-  border-color: var(--color-primary);
+/* Inline Type Toggle */
+.type-toggle-selector {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.2rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+}
+
+.type-btn {
+  border: none;
+  background: transparent;
+  border-radius: 0.5rem;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: var(--transition-smooth);
+}
+
+.type-btn:hover {
+  color: var(--text-main);
   background: rgba(255, 255, 255, 0.04);
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.1);
+}
+
+.type-btn.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-primary);
+}
+
+.type-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 .todo-meta-controls {
@@ -1454,6 +1557,105 @@ header {
   gap: 1rem;
   flex-wrap: wrap;
 }
+
+.todo-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* Due Date input picker */
+.due-date-container {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.75rem;
+  height: 36px;
+  color: var(--text-muted);
+  transition: var(--transition-smooth);
+}
+
+.due-date-container:focus-within {
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.due-date-container input[type="date"] {
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-family: var(--font-main);
+  font-size: 0.8rem;
+  outline: none;
+  color-scheme: dark;
+}
+
+.due-date-container svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Badges */
+.todo-due-date-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.todo-due-date-badge.today {
+  background: rgba(217, 119, 6, 0.1);
+  color: var(--color-partial);
+  border-color: rgba(217, 119, 6, 0.2);
+}
+
+.todo-due-date-badge.overdue {
+  background: rgba(225, 29, 72, 0.1);
+  color: var(--color-uncompleted);
+  border-color: rgba(225, 29, 72, 0.25);
+  animation: pulse-red-border 1.5s infinite alternate;
+}
+
+.todo-streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: rgba(217, 119, 6, 0.08);
+  color: #f97316;
+  border: 1px solid rgba(217, 119, 6, 0.15);
+  border-radius: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.todo-streak-badge svg {
+  width: 12px;
+  height: 12px;
+  fill: #f97316;
+}
+
+@keyframes pulse-red-border {
+  from {
+    border-color: rgba(225, 29, 72, 0.2);
+    box-shadow: 0 0 4px rgba(225, 29, 72, 0.1);
+  }
+  to {
+    border-color: rgba(225, 29, 72, 0.6);
+    box-shadow: 0 0 8px rgba(225, 29, 72, 0.3);
+  }
+}
+
 
 .priority-selector {
   display: flex;

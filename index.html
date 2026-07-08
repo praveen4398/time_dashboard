@@ -199,30 +199,60 @@
             </div>
           </div>
 
+          <!-- Main View Tabs Selector: To-Do List vs Daily Habits -->
+          <div class="todo-view-selector">
+            <button class="view-selector-btn active" id="view-selector-todo" data-view="todo">
+              <i data-lucide="check-square"></i>
+              <span>To-Do List</span>
+            </button>
+            <button class="view-selector-btn" id="view-selector-habit" data-view="habit">
+              <i data-lucide="repeat"></i>
+              <span>Daily Habits</span>
+            </button>
+          </div>
+
           <!-- Add Task Form -->
           <div class="todo-input-form">
             <div class="todo-input-container">
               <input type="text" id="todo-input" placeholder="What task are you focusing on today?" aria-label="Task title">
+              
+              <!-- Inline Type Toggle (One-off Task vs Daily Habit) -->
+              <div class="type-toggle-selector">
+                <button class="type-btn active" data-type="todo" title="One-off Task" type="button">
+                  <i data-lucide="check-square"></i>
+                </button>
+                <button class="type-btn" data-type="habit" title="Daily Habit" type="button">
+                  <i data-lucide="repeat"></i>
+                </button>
+              </div>
             </div>
             
             <div class="todo-meta-controls">
-              <!-- Priority selection buttons -->
-              <div class="priority-selector">
-                <span class="selector-label">Priority:</span>
-                <button class="btn-priority active" data-priority="low" type="button">
-                  <span class="dot low"></span> Low
-                </button>
-                <button class="btn-priority" data-priority="medium" type="button">
-                  <span class="dot medium"></span> Med
-                </button>
-                <button class="btn-priority" data-priority="high" type="button">
-                  <span class="dot high"></span> High
-                </button>
+              <div class="todo-meta-left">
+                <!-- Priority selection buttons -->
+                <div class="priority-selector">
+                  <span class="selector-label">Priority:</span>
+                  <button class="btn-priority active" data-priority="low" type="button">
+                    <span class="dot low"></span> Low
+                  </button>
+                  <button class="btn-priority" data-priority="medium" type="button">
+                    <span class="dot medium"></span> Med
+                  </button>
+                  <button class="btn-priority" data-priority="high" type="button">
+                    <span class="dot high"></span> High
+                  </button>
+                </div>
+                
+                <!-- Due Date selector (only visible for One-off Tasks) -->
+                <div class="due-date-container" id="due-date-container">
+                  <i data-lucide="calendar"></i>
+                  <input type="date" id="todo-due-date" title="Due Date" aria-label="Due Date">
+                </div>
               </div>
               
               <button id="btn-add-todo" class="btn btn-primary" style="padding: 0 1.25rem; height: 38px; border-radius: 0.5rem; flex: none;">
                 <i data-lucide="plus"></i>
-                <span>Add Task</span>
+                <span>Add Item</span>
               </button>
             </div>
           </div>
