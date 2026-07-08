@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Dashboard &amp; Stop Watch</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏱️</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="dashboard-container">
+    
+    <!-- Top Header -->
+    <header>
+      <div class="brand-section">
+        <div class="brand-logo">
+          <!-- Lucide clock icon replacement -->
+          <i data-lucide="clock"></i>
+        </div>
+        <div class="brand-title">
+          <h1>TIME DASHBOARD</h1>
+          <p>Time Tracking &amp; Habit Visualization</p>
+        </div>
+      </div>
+      
+      <!-- Real-time Clock Widget -->
+      <div class="realtime-clock-widget" title="Current Local Date &amp; Time">
+        <i data-lucide="calendar"></i>
+        <span id="realtime-date-display">Monday, Jul 6</span>
+        <span class="clock-separator">|</span>
+        <span id="realtime-clock-display">12:00:00 AM</span>
+      </div>
+      
+      <!-- Summary metrics widget in header -->
+      <div class="stats-summary" id="header-stats">
+        <div class="stat-badge completed">
+          <i data-lucide="check-circle-2"></i>
+          <span>Completed: <strong id="stat-completed-count">0</strong>/<span class="total-days-label">30</span></span>
+        </div>
+        <div class="stat-badge partial">
+          <i data-lucide="alert-circle"></i>
+          <span>Partial: <strong id="stat-partial-count">0</strong>/<span class="total-days-label">30</span></span>
+        </div>
+        <div class="stat-badge uncompleted">
+          <i data-lucide="x-circle"></i>
+          <span>Uncompleted: <strong id="stat-uncompleted-count">30</strong>/<span class="total-days-label">30</span></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dashboard Area -->
+    <main class="dashboard-grid">
+      
+      <!-- Left Column: Stopwatch -->
+      <section class="glass-card stopwatch-section">
+        <div class="card-title">
+          <i data-lucide="timer"></i>
+          <h2>STOP WATCH</h2>
+        </div>
+        
+        <div class="stopwatch-wrapper">
+          <!-- Round Dial -->
+          <div class="stopwatch-dial-container">
+            <div class="stopwatch-glow" id="dial-glow"></div>
+            
+            <svg class="stopwatch-svg" width="280" height="280" viewBox="0 0 280 280">
+              <defs>
+                <linearGradient id="stopwatch-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#d4af37" />
+                  <stop offset="100%" stop-color="#f9e8a2" />
+                </linearGradient>
+              </defs>
+              <!-- Circular Track -->
+              <circle class="dial-track" cx="140" cy="140" r="130" />
+              <!-- Animated Ring Progress -->
+              <circle class="dial-progress" id="dial-progress" cx="140" cy="140" r="130" />
+            </svg>
+            
+            <!-- Time Readout inside the Dial -->
+            <div class="stopwatch-time-display">
+              <div class="digital-time" id="stopwatch-time">00:00:00</div>
+              <div class="digital-ms" id="stopwatch-ms">.00</div>
+              <div class="stopwatch-status-label" id="stopwatch-status">IDLE</div>
+            </div>
+          </div>
+          
+          <!-- Controls -->
+          <div class="stopwatch-controls">
+            <button class="btn btn-primary" id="btn-start-pause">
+              <i data-lucide="play"></i>
+              <span>Start</span>
+            </button>
+            <div class="stopwatch-sub-controls">
+              <button class="btn btn-secondary" id="btn-lap" disabled title="Record Lap">
+                <i data-lucide="flag"></i>
+                <span>Lap</span>
+              </button>
+              <button class="btn btn-secondary" id="btn-save-time" disabled title="Save Time with Timestamp">
+                <i data-lucide="save"></i>
+                <span>Save</span>
+              </button>
+              <button class="btn btn-danger" id="btn-reset" disabled title="Reset Stopwatch">
+                <i data-lucide="rotate-ccw"></i>
+                <span>Reset</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- History and Laps Tabs -->
+          <div class="stopwatch-tabs">
+            <button class="tab-btn active" id="tab-btn-history">
+              <i data-lucide="history"></i>
+              <span>History</span>
+            </button>
+            <button class="tab-btn" id="tab-btn-laps">
+              <i data-lucide="flag"></i>
+              <span>Laps</span>
+            </button>
+          </div>
+
+          <!-- Laps/History Container -->
+          <div class="history-list-container" id="history-list-container">
+            <!-- Dynamic entries loaded here -->
+          </div>
+
+          <!-- Weekly Focus Sparkline Chart -->
+          <div class="weekly-chart-wrapper">
+            <h3 class="chart-title">
+              <i data-lucide="bar-chart-2"></i>
+              <span>Weekly Focus Activity</span>
+            </h3>
+            <div class="weekly-bars" id="weekly-bars-container">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: 30-Day Grid Board -->
+      <section class="glass-card board-section">
+        <div class="board-header">
+          <div class="card-title-group">
+            <div class="card-title" style="margin-bottom: 0;">
+              <i data-lucide="calendar"></i>
+              <h2 id="board-title-text">VISUALIZATION BOARD</h2>
+            </div>
+            
+            <!-- Month Selection Controls -->
+            <div class="month-selector">
+              <button class="btn-nav" id="btn-prev-month" title="Previous Month">
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <span id="current-month-display">JULY 2026</span>
+              <button class="btn-nav" id="btn-next-month" title="Next Month">
+                <i data-lucide="chevron-right"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Board Progress Bar -->
+          <div style="width: 100%; margin-top: 1rem;">
+            <div class="progress-container">
+              <div class="progress-segment completed" id="progress-completed" style="width: 0%"></div>
+              <div class="progress-segment partial" id="progress-partial" style="width: 0%"></div>
+              <div class="progress-segment uncompleted" id="progress-uncompleted" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- The 30 Grid Blocks -->
+        <div class="blocks-grid" id="blocks-grid">
+          <!-- JavaScript generates blocks 1 to 30 here -->
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Slide-out Drawer Panel for Day Details -->
+  <div class="drawer-overlay" id="drawer-overlay">
+    <div class="drawer-panel" id="drawer-panel">
+      
+      <div class="drawer-header">
+        <h3 class="drawer-title" id="drawer-day-title">Day 01 Progress</h3>
+        <button class="btn-close" id="drawer-close" aria-label="Close panel">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      
+      <div class="drawer-body">
+        
+        <!-- Day Status Form Group -->
+        <div class="form-group">
+          <label class="form-label">Update Status</label>
+          <div class="status-options-grid">
+            
+            <button class="status-option-btn" data-state="uncompleted">
+              <div class="option-indicator"></div>
+              <div class="option-info">
+                <span class="option-name">Uncompleted / Red</span>
+                <span class="option-desc">Task not yet started or unfinished</span>
+              </div>
+            </button>
+            
+            <button class="status-option-btn" data-state="partial">
+              <div class="option-indicator"></div>
+              <div class="option-info">
+                <span class="option-name">Partially Completed / Yellow</span>
+                <span class="option-desc">Task started but not completely finished</span>
+              </div>
+            </button>
+            
+            <button class="status-option-btn" data-state="completed">
+              <div class="option-indicator"></div>
+              <div class="option-info">
+                <span class="option-name">Completed / Green</span>
+                <span class="option-desc">All milestones achieved successfully</span>
+              </div>
+            </button>
+            
+          </div>
+        </div>
+        
+        <!-- Stopwatch Focus Stats -->
+        <div class="form-group stopwatch-focus-stats" id="stopwatch-focus-stats-container">
+          <!-- Populated dynamically by JS -->
+        </div>
+        
+        <!-- Manual Focus Logger -->
+        <div class="form-group">
+          <label class="form-label">Add Focus Time Manually</label>
+          <div class="manual-log-inputs">
+            <div class="manual-input-wrapper">
+              <input type="number" id="manual-hours" min="0" max="23" placeholder="0">
+              <span class="manual-input-unit">h</span>
+            </div>
+            <div class="manual-input-wrapper">
+              <input type="number" id="manual-minutes" min="0" max="59" placeholder="00">
+              <span class="manual-input-unit">m</span>
+            </div>
+            <button id="btn-add-manual-log" class="btn btn-primary" style="padding: 0 1.2rem; height: 38px; border-radius: 0.35rem;">Add Time</button>
+          </div>
+        </div>
+        
+        <!-- Log Notes Form Group -->
+        <div class="form-group">
+          <label class="form-label" for="drawer-notes">Daily Log &amp; Accomplishments</label>
+          <textarea class="textarea-log" id="drawer-notes" placeholder="Write down what you accomplished today, key statistics, or goals..."></textarea>
+        </div>
+
+      </div>
+      
+      <!-- Footer with Save controls -->
+      <div class="drawer-footer">
+        <button class="btn btn-primary" id="btn-save-drawer" style="flex: 2;">
+          <i data-lucide="save"></i>
+          <span>Save Entries</span>
+        </button>
+        <button class="btn btn-secondary" id="btn-cancel-drawer">
+          <span>Cancel</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Lucide Icons Library (renders icons dynamically) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Main Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
