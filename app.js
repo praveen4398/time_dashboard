@@ -20,6 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeStopwatchTab = 'history'; // 'history' | 'laps'
   let tooltipEl;
 
+  // To-Do List State
+  let tasks = [];
+  let activeTaskId = null;
+  let currentTodoFilter = 'all'; // 'all' | 'active' | 'completed'
+  let selectedTodoPriority = 'low'; // 'low' | 'medium' | 'high'
+
   // Grid State (Dynamic Calendar)
   let currentYear = new Date().getFullYear();
   let currentMonth = new Date().getMonth(); // 0-11
@@ -83,6 +89,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const manualHoursInput = document.getElementById('manual-hours');
   const manualMinutesInput = document.getElementById('manual-minutes');
   const btnAddManualLog = document.getElementById('btn-add-manual-log');
+
+  // To-Do DOM Elements
+  const todoInput = document.getElementById('todo-input');
+  const btnAddTodo = document.getElementById('btn-add-todo');
+  const todoListContainer = document.getElementById('todo-list-container');
+  const todoProgressText = document.getElementById('todo-progress-text');
+  const todoProgressFill = document.getElementById('todo-progress-fill');
+  const btnClearCompleted = document.getElementById('btn-clear-completed');
+  const priorityButtons = document.querySelectorAll('.btn-priority');
+  const todoTabs = document.querySelectorAll('.todo-tab');
+  const activeTaskIndicator = document.getElementById('active-task-indicator');
+  const activeTaskName = document.getElementById('active-task-name');
 
   /* ==========================================================================
      INITIALIZATION
@@ -158,6 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
         startStopwatch();
       }
     });
+
+    // 8. Load and Render To-Do Tasks
+    loadTasks();
+    renderTasks();
   }
 
   function parseDurationToMs(durationStr) {
@@ -267,6 +289,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Start RAF Loop
     stopwatchState.animationFrameId = requestAnimationFrame(tickStopwatch);
+
+    // Sync visual elements in To-Do list
+    renderTasks();
   }
 
   function pauseStopwatch() {
@@ -290,6 +315,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Persist stopwatch state
     saveStopwatchToStorage();
+
+    // Sync visual elements in To-Do list
+    renderTasks();
   }
 
   function resetStopwatch() {
@@ -301,6 +329,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset state
     stopwatchState.elapsedTime = 0;
     stopwatchState.laps = [];
+    activeTaskId = null;
+    saveTasksToStorage();
+    renderTasks();
     
     // Reset Display & SVG Ring
     updateStopwatchDisplay(0);
@@ -352,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Get elegant date/time stamp
     const now = new Date();
-    const timestampFormatted = now.toLocaleString('en-US', {
+    let timestampFormatted = now.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -367,6 +398,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const dy = now.getDate();
     const dateKey = `${yr}-${(mo + 1).toString().padStart(2, '0')}-${dy.toString().padStart(2, '0')}`;
 
+    if (activeTaskId !== null) {
+      const activeTask = tasks.find(t => t.id === activeTaskId);
+      if (activeTask) {
+        activeTask.trackedMs = (activeTask.trackedMs || 0) + elapsed;
+        timestampFormatted += ` (Task: ${activeTask.title})`;
+        saveTasksToStorage();
+      }
+    }
+
     stopwatchState.history.unshift({
       id: Date.now(),
       durationMs: elapsed,
@@ -374,6 +414,9 @@ document.addEventListener('DOMContentLoaded', () => {
       timestamp: timestampFormatted,
       dateKey: dateKey
     });
+
+    // Reset stopwatch after logging to prevent double-tracking/accumulation
+    resetStopwatch();
 
     // Switch to History tab automatically on save
     activeStopwatchTab = 'history';
@@ -830,6 +873,44 @@ document.addEventListener('DOMContentLoaded', () => {
   btnLap.addEventListener('click', recordLap);
   btnSaveTime.addEventListener('click', saveStopwatchTime);
 
+  // To-Do Actions
+  btnAddTodo.addEventListener('click', () => {
+    const title = todoInput.value.trim();
+    if (title) {
+      addTask(title, selectedTodoPriority);
+    }
+  });
+
+  todoInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const title = todoInput.value.trim();
+      if (title) {
+        addTask(title, selectedTodoPriority);
+      }
+    }
+  });
+
+  // Priority Selector
+  priorityButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      priorityButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTodoPriority = btn.getAttribute('data-priority');
+    });
+  });
+
+  // Filters
+  todoTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      todoTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentTodoFilter = tab.getAttribute('data-filter');
+      renderTasks();
+    });
+  });
+
+  btnClearCompleted.addEventListener('click', clearCompletedTasks);
+
   // Tab selections
   tabBtnHistory.addEventListener('click', () => {
     activeStopwatchTab = 'history';
@@ -1053,6 +1134,226 @@ document.addEventListener('DOMContentLoaded', () => {
      STARTUP EXECUTION
      ========================================================================== */
   
+  /* ==========================================================================
+     TO-DO LIST (TASK COMPANION) LOGIC
+     ========================================================================== */
+  
+  function loadTasks() {
+    const savedTasks = localStorage.getItem('aura_todo_tasks');
+    if (savedTasks) {
+      tasks = JSON.parse(savedTasks);
+    } else {
+      tasks = [];
+    }
+
+    const savedActiveTaskId = localStorage.getItem('aura_todo_active_task_id');
+    if (savedActiveTaskId) {
+      activeTaskId = parseInt(savedActiveTaskId, 10);
+    } else {
+      activeTaskId = null;
+    }
+  }
+
+  function saveTasksToStorage() {
+    localStorage.setItem('aura_todo_tasks', JSON.stringify(tasks));
+    if (activeTaskId !== null) {
+      localStorage.setItem('aura_todo_active_task_id', activeTaskId);
+    } else {
+      localStorage.removeItem('aura_todo_active_task_id');
+    }
+  }
+
+  function addTask(title, priority) {
+    const newTask = {
+      id: Date.now(),
+      title: title,
+      priority: priority,
+      isCompleted: false,
+      trackedMs: 0
+    };
+    tasks.push(newTask);
+    saveTasksToStorage();
+    renderTasks();
+    todoInput.value = '';
+  }
+
+  function toggleTaskCompletion(id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.isCompleted = !task.isCompleted;
+      // If task is completed and it is currently active, stop active tracking
+      if (task.isCompleted && activeTaskId === id) {
+        if (stopwatchState.isRunning) {
+          pauseStopwatch();
+        }
+        activeTaskId = null;
+      }
+      saveTasksToStorage();
+      renderTasks();
+    }
+  }
+
+  function deleteTask(id) {
+    if (activeTaskId === id) {
+      if (stopwatchState.isRunning) {
+        pauseStopwatch();
+      }
+      activeTaskId = null;
+    }
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasksToStorage();
+    renderTasks();
+  }
+
+  function clearCompletedTasks() {
+    const completedIds = tasks.filter(t => t.isCompleted).map(t => t.id);
+    if (completedIds.includes(activeTaskId)) {
+      if (stopwatchState.isRunning) {
+        pauseStopwatch();
+      }
+      activeTaskId = null;
+    }
+    tasks = tasks.filter(t => !t.isCompleted);
+    saveTasksToStorage();
+    renderTasks();
+  }
+
+  function renderTasks() {
+    todoListContainer.innerHTML = '';
+    
+    // Filter tasks
+    let filteredTasks = tasks;
+    if (currentTodoFilter === 'active') {
+      filteredTasks = tasks.filter(t => !t.isCompleted);
+    } else if (currentTodoFilter === 'completed') {
+      filteredTasks = tasks.filter(t => t.isCompleted);
+    }
+
+    // Sort tasks: uncompleted first, then by priority (high > medium > low), then by id/date
+    const priorityWeight = { high: 3, medium: 2, low: 1 };
+    filteredTasks.sort((a, b) => {
+      if (a.isCompleted !== b.isCompleted) {
+        return a.isCompleted ? 1 : -1;
+      }
+      const pDiff = priorityWeight[b.priority] - priorityWeight[a.priority];
+      if (pDiff !== 0) return pDiff;
+      return b.id - a.id;
+    });
+
+    if (filteredTasks.length === 0) {
+      todoListContainer.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 2rem 0;">
+          No tasks found. Add a task to start tracking!
+        </div>
+      `;
+    } else {
+      filteredTasks.forEach(task => {
+        const item = document.createElement('div');
+        item.className = `todo-item priority-${task.priority} ${task.isCompleted ? 'completed' : ''}`;
+        
+        const isTrackingThis = activeTaskId === task.id;
+        const timeFormatted = formatHoursMinutesSeconds(task.trackedMs || 0);
+        
+        item.innerHTML = `
+          <div class="todo-item-left">
+            <label class="todo-checkbox-wrapper">
+              <input type="checkbox" class="todo-checkbox-input" ${task.isCompleted ? 'checked' : ''}>
+              <span class="todo-custom-checkbox"></span>
+            </label>
+            <div class="todo-details">
+              <span class="todo-title">${task.title}</span>
+              <div class="todo-meta-info">
+                <span class="todo-priority-badge" style="text-transform: capitalize; font-weight: 600; color: ${task.priority === 'high' ? 'var(--color-uncompleted)' : task.priority === 'medium' ? 'var(--color-partial)' : '#3b82f6'};">
+                  ${task.priority}
+                </span>
+                •
+                <span class="todo-time-badge ${isTrackingThis ? 'tracking' : ''}">
+                  <i data-lucide="clock" style="width: 10px; height: 10px;"></i>
+                  <span>Tracked: ${timeFormatted}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="todo-item-actions">
+            <button class="btn-todo-action play-btn ${isTrackingThis ? 'active-tracking' : ''}" title="${isTrackingThis && stopwatchState.isRunning ? 'Pause Tracking' : 'Track Focus Time'}" ${task.isCompleted ? 'disabled' : ''}>
+              <i data-lucide="${isTrackingThis && stopwatchState.isRunning ? 'pause' : 'play'}"></i>
+            </button>
+            <button class="btn-todo-action delete-btn" title="Delete Task">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        `;
+
+        // Checkbox event
+        item.querySelector('.todo-checkbox-input').addEventListener('change', () => {
+          toggleTaskCompletion(task.id);
+        });
+
+        // Play/Pause event
+        item.querySelector('.play-btn').addEventListener('click', () => {
+          handleTaskTrackingToggle(task.id);
+        });
+
+        // Delete event
+        item.querySelector('.delete-btn').addEventListener('click', () => {
+          deleteTask(task.id);
+        });
+
+        todoListContainer.appendChild(item);
+      });
+    }
+
+    // Update Progress Info
+    const totalCount = tasks.length;
+    const completedCount = tasks.filter(t => t.isCompleted).length;
+    todoProgressText.textContent = `${completedCount}/${totalCount} Completed`;
+    const pct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+    todoProgressFill.style.width = `${pct}%`;
+
+    // Render active task indicator
+    updateActiveTaskIndicator();
+
+    // Recreate Lucide Icons
+    lucide.createIcons();
+  }
+
+  function handleTaskTrackingToggle(id) {
+    if (activeTaskId === id) {
+      // Toggle play/pause on the current active task
+      if (stopwatchState.isRunning) {
+        pauseStopwatch();
+      } else {
+        startStopwatch();
+      }
+    } else {
+      // If there was another active task and stopwatch has elapsed time, auto-save first!
+      const currentElapsed = stopwatchState.isRunning 
+        ? Date.now() - stopwatchState.startTime 
+        : stopwatchState.elapsedTime;
+        
+      if (currentElapsed > 0) {
+        saveStopwatchTime();
+      }
+      
+      // Start tracking new task
+      activeTaskId = id;
+      saveTasksToStorage();
+      startStopwatch();
+    }
+  }
+
+  function updateActiveTaskIndicator() {
+    if (activeTaskId !== null) {
+      const activeTask = tasks.find(t => t.id === activeTaskId);
+      if (activeTask) {
+        activeTaskIndicator.style.display = 'flex';
+        activeTaskName.textContent = activeTask.title;
+        return;
+      }
+    }
+    activeTaskIndicator.style.display = 'none';
+  }
+
   init();
   updateRealTimeClock();
   setInterval(updateRealTimeClock, 1000);

@@ -82,6 +82,11 @@
               <div class="digital-time" id="stopwatch-time">00:00:00</div>
               <div class="digital-ms" id="stopwatch-ms">.00</div>
               <div class="stopwatch-status-label" id="stopwatch-status">IDLE</div>
+              <!-- Active task tracker display -->
+              <div class="active-task-indicator" id="active-task-indicator" style="display: none;">
+                <i data-lucide="target"></i>
+                <span id="active-task-name">Task Name</span>
+              </div>
             </div>
           </div>
           
@@ -137,42 +142,111 @@
         </div>
       </section>
 
-      <!-- Right Column: 30-Day Grid Board -->
-      <section class="glass-card board-section">
-        <div class="board-header">
-          <div class="card-title-group">
-            <div class="card-title" style="margin-bottom: 0;">
-              <i data-lucide="calendar"></i>
-              <h2 id="board-title-text">VISUALIZATION BOARD</h2>
+      <!-- Right Column Container -->
+      <div class="dashboard-right-column">
+        
+        <!-- 30-Day Grid Board -->
+        <section class="glass-card board-section">
+          <div class="board-header">
+            <div class="card-title-group">
+              <div class="card-title" style="margin-bottom: 0;">
+                <i data-lucide="calendar"></i>
+                <h2 id="board-title-text">VISUALIZATION BOARD</h2>
+              </div>
+              
+              <!-- Month Selection Controls -->
+              <div class="month-selector">
+                <button class="btn-nav" id="btn-prev-month" title="Previous Month">
+                  <i data-lucide="chevron-left"></i>
+                </button>
+                <span id="current-month-display">JULY 2026</span>
+                <button class="btn-nav" id="btn-next-month" title="Next Month">
+                  <i data-lucide="chevron-right"></i>
+                </button>
+              </div>
             </div>
             
-            <!-- Month Selection Controls -->
-            <div class="month-selector">
-              <button class="btn-nav" id="btn-prev-month" title="Previous Month">
-                <i data-lucide="chevron-left"></i>
-              </button>
-              <span id="current-month-display">JULY 2026</span>
-              <button class="btn-nav" id="btn-next-month" title="Next Month">
-                <i data-lucide="chevron-right"></i>
-              </button>
+            <!-- Board Progress Bar -->
+            <div style="width: 100%; margin-top: 1rem;">
+              <div class="progress-container">
+                <div class="progress-segment completed" id="progress-completed" style="width: 0%"></div>
+                <div class="progress-segment partial" id="progress-partial" style="width: 0%"></div>
+                <div class="progress-segment uncompleted" id="progress-uncompleted" style="width: 100%"></div>
+              </div>
             </div>
           </div>
-          
-          <!-- Board Progress Bar -->
-          <div style="width: 100%; margin-top: 1rem;">
-            <div class="progress-container">
-              <div class="progress-segment completed" id="progress-completed" style="width: 0%"></div>
-              <div class="progress-segment partial" id="progress-partial" style="width: 0%"></div>
-              <div class="progress-segment uncompleted" id="progress-uncompleted" style="width: 100%"></div>
-            </div>
-          </div>
-        </div>
 
-        <!-- The 30 Grid Blocks -->
-        <div class="blocks-grid" id="blocks-grid">
-          <!-- JavaScript generates blocks 1 to 30 here -->
-        </div>
-      </section>
+          <!-- The 30 Grid Blocks -->
+          <div class="blocks-grid" id="blocks-grid">
+            <!-- JavaScript generates blocks 1 to 30 here -->
+          </div>
+        </section>
+
+        <!-- To-Do List (Task Companion) -->
+        <section class="glass-card todo-section">
+          <div class="todo-header-group">
+            <div class="card-title" style="margin-bottom: 0;">
+              <i data-lucide="clipboard-list"></i>
+              <h2>TASK COMPANION</h2>
+            </div>
+            
+            <!-- Task Completion Progress -->
+            <div class="todo-progress-wrapper">
+              <span class="todo-progress-text" id="todo-progress-text">0/0 Completed</span>
+              <div class="todo-progress-bar-container">
+                <div class="todo-progress-bar-fill" id="todo-progress-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Task Form -->
+          <div class="todo-input-form">
+            <div class="todo-input-container">
+              <input type="text" id="todo-input" placeholder="What task are you focusing on today?" aria-label="Task title">
+            </div>
+            
+            <div class="todo-meta-controls">
+              <!-- Priority selection buttons -->
+              <div class="priority-selector">
+                <span class="selector-label">Priority:</span>
+                <button class="btn-priority active" data-priority="low" type="button">
+                  <span class="dot low"></span> Low
+                </button>
+                <button class="btn-priority" data-priority="medium" type="button">
+                  <span class="dot medium"></span> Med
+                </button>
+                <button class="btn-priority" data-priority="high" type="button">
+                  <span class="dot high"></span> High
+                </button>
+              </div>
+              
+              <button id="btn-add-todo" class="btn btn-primary" style="padding: 0 1.25rem; height: 38px; border-radius: 0.5rem; flex: none;">
+                <i data-lucide="plus"></i>
+                <span>Add Task</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter bar -->
+          <div class="todo-filter-bar">
+            <div class="todo-tabs">
+              <button class="todo-tab active" data-filter="all">All</button>
+              <button class="todo-tab" data-filter="active">Active</button>
+              <button class="todo-tab" data-filter="completed">Completed</button>
+            </div>
+            <button id="btn-clear-completed" class="btn-clear-completed" title="Clear Completed Tasks">
+              <i data-lucide="trash-2"></i>
+              <span>Clear Completed</span>
+            </button>
+          </div>
+
+          <!-- Tasks list container -->
+          <div class="todo-list" id="todo-list-container">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </section>
+
+      </div>
 
     </main>
 
